@@ -2,7 +2,7 @@
   "name": "nigibot",
   "version": "1.0.0",
   "description": "discord bot",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "test"
   },
