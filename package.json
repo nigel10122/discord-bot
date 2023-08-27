@@ -2,9 +2,9 @@
   "name": "nigibot",
   "version": "1.0.0",
   "description": "discord bot",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/index.js",
     "test": "test"
   },
   "author": "nigel10122",
