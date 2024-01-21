@@ -1,4 +1,6 @@
 import {Client, IntentsBitField } from "discord.js";
+import puppeteer from 'puppeteer';
+
 
 import * as dotenv from 'dotenv';
 import { nigiBot } from "./nigi-bot.js";
@@ -21,7 +23,7 @@ nigiClient.on('ready', (e) => {
 
 nigiClient.on('messageCreate', async (message) => {
 
-        if (!message.author.bot &&  includesKeyword(message)){
+        if (!message.author.bot &&  await includesKeyword(message) ){
             message.reply(await nigiBot(process.env.OPEN_AI_TOKEN, message.content));
         }
      
@@ -31,7 +33,7 @@ nigiClient.on('messageCreate', async (message) => {
 const includesKeyword = async (message) => {
 
 
-    const keyWords = ['hey pranit', 'eeh smiith', 'buddy', 'hoohoo', 'yaar'];
+    const keyWords = ['nigibot'];
 
     let includesKeyWord = true;
 
