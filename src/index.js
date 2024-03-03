@@ -23,7 +23,7 @@ nigiClient.on('ready', (e) => {
 
 nigiClient.on('messageCreate', async (message) => {
 
-        if (!message.author.bot && message.includes("nigibot"){
+        if (!message.author.bot && message.content.includes("nigibot"){
             message.reply(await nigiBot(process.env.OPEN_AI_TOKEN, message.content));
         }
      
