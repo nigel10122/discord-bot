@@ -22,4 +22,4 @@
 - **Support:** (Discord support server invite or email)
 
 ## Try it Yourself
-[Invite NigiBot](https://discord.com/oauth2/authorize?client_id=1145135940969439325&permissions=34816&integration_type=0&scope=bot+applications.commands)
+[Invite NigiBot](hhttps://discord.com/oauth2/authorize?client_id=1145135940969439325&scope=bot+applications.commands&permissions=93184)
