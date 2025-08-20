@@ -1,21 +1,21 @@
 {
   "name": "nigibot",
   "version": "1.0.0",
-  "description": "discord bot",
+  "description": "Privacy-first Discord bot with pluggable skills (Ask + Web Screenshot)",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "test"
+    "build": "echo \"no build\"",
+    "test": "echo \"no tests\" && exit 0"
   },
   "author": "nigel10122",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "discord.js": "^14.13.0",
-    "dotenv": "^16.3.1",
-    "nodemon": "^3.0.1",
-    "openai": "^4.2.0",
-    "puppeteer": "^21.1.1",
-    "readline-sync": "^1.4.10"
-  },
-  "type": "module"
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "nodemon": "^3.1.10",
+    "openai": "^4.53.1",
+    "puppeteer": "^23.4.1"
+  }
 }
