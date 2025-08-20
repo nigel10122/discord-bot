@@ -9,7 +9,7 @@
 A Discord bot powered by OpenAI for chat and website screenshots.
 
 ## Invite the Bot
-👉 [Click here to invite NigiBot to your server](hhttps://discord.com/oauth2/authorize?client_id=1145135940969439325&scope=bot+applications.commands&permissions=93184)
+👉 [Click here to invite NigiBot to your server](https://discord.com/oauth2/authorize?client_id=1145135940969439325&scope=bot+applications.commands&permissions=93184)
 
 ## Usage
 After inviting the bot:
@@ -17,7 +17,7 @@ After inviting the bot:
 - `/shot url:<website>` → Capture a screenshot of any website
 - Type **nigibot** in chat → keyword response
 
-[Invite NigiBot](hhttps://discord.com/oauth2/authorize?client_id=1145135940969439325&scope=bot+applications.commands&permissions=93184)
+[Invite NigiBot](https://discord.com/oauth2/authorize?client_id=1145135940969439325&scope=bot+applications.commands&permissions=93184)
 
 ## Why it’s different
 - **Privacy by design:** secret redaction + bounded memory per channel
