@@ -7,10 +7,14 @@ import { createNigiBot } from '../nigi-bot.js';
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,        // for keyword trigger
-    GatewayIntentBits.MessageContent         // needed for keyword matching
+    GatewayIntentBits.GuildMessages,   // keyword trigger
+    GatewayIntentBits.MessageContent   // keyword matching
   ]
 });
+
+// ---------- Lightweight runtime stats ----------
+const bootTime = Date.now();
+let sessionCommands = 0;  // counts /ask, /shot, and keyword-triggered replies
 
 // ---------- Healthcheck ----------
 const port = Number(process.env.PORT || 3000);
@@ -36,10 +40,16 @@ const slashDefs = [
     .setName('ask')
     .setDescription('Ask nigiBot a question (LLM + memory)')
     .addStringOption(opt => opt.setName('q').setDescription('Your question').setRequired(true)),
+
   new SlashCommandBuilder()
     .setName('shot')
     .setDescription('Screenshot a URL and get a quick summary')
-    .addStringOption(opt => opt.setName('url').setDescription('https://...').setRequired(true))
+    .addStringOption(opt => opt.setName('url').setDescription('https://...').setRequired(true)),
+
+  // NEW: /stats
+  new SlashCommandBuilder()
+    .setName('stats')
+    .setDescription('Show bot usage stats (servers, uptime, session commands)')
 ].map(cmd => cmd.toJSON());
 
 // ---------- Register commands (guild fast; global if no GUILD_ID) ----------
@@ -57,7 +67,10 @@ async function registerCommands() {
       );
       console.log('✅ Registered GUILD slash commands');
     } else {
-      await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), { body: slashDefs });
+      await rest.put(
+        Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
+        { body: slashDefs }
+      );
       console.log('✅ Registered GLOBAL slash commands (may take ~1h)');
     }
   } catch (e) {
@@ -73,14 +86,19 @@ client.on(Events.InteractionCreate, async interaction => {
   try {
     if (!interaction.isChatInputCommand()) return;
 
+    console.log(`[STATS] Command run: /${interaction.commandName} by ${interaction.user.tag}`);
+
     if (interaction.commandName === 'ask') {
+      sessionCommands++;
       const q = interaction.options.getString('q', true);
       await interaction.deferReply();
       const result = await nigiBot.handleAsk(interaction.channelId, interaction.user.id, q);
       await interaction.editReply(result.response);
+      return;
     }
 
     if (interaction.commandName === 'shot') {
+      sessionCommands++;
       const url = interaction.options.getString('url', true);
       await interaction.deferReply();
       const result = await nigiBot.handleShot(interaction.channelId, interaction.user.id, url);
@@ -89,6 +107,16 @@ client.on(Events.InteractionCreate, async interaction => {
       } else {
         await interaction.editReply(result.response);
       }
+      return;
+    }
+
+    if (interaction.commandName === 'stats') {
+      const uptimeSec = Math.floor((Date.now() - bootTime) / 1000);
+      const guilds = client.guilds.cache.size;
+      await interaction.reply(
+        `📊 **nigiBot Stats**\n• Servers: ${guilds}\n• Uptime: ${uptimeSec}s\n• Commands this session: ${sessionCommands}`
+      );
+      return;
     }
   } catch (err) {
     console.error('Interaction error:', err);
@@ -104,9 +132,11 @@ client.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
     const content = message.content || '';
     if (content.toLowerCase().includes('nigibot')) {
+      sessionCommands++;
       const prompt = content.replace(/nigibot/ig, '').trim() || 'Help me with this chat.';
       const result = await nigiBot.handleAsk(message.channelId, message.author.id, prompt);
       await message.reply(result.response);
+      console.log(`[STATS] keyword reply executed for ${message.author.tag}`);
     }
   } catch (err) {
     console.error('MessageCreate error:', err);

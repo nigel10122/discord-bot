@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import puppeteer from 'puppeteer';
 import crypto from 'crypto';
 
-// Small logger
+// ----- tiny logger -----
 function log(level, ...args) {
   const levels = ['error','warn','info','debug'];
   const cur = process.env.LOG_LEVEL || 'info';
@@ -11,9 +11,9 @@ function log(level, ...args) {
   }
 }
 
-// Secret redaction (privacy-first)
+// ----- secret redaction (privacy-first) -----
 const SECRET_REGEXES = [
-  /sk-[A-Za-z0-9]{20,}/g,                      // API-style keys
+  /sk-[A-Za-z0-9]{20,}/g,
   /(?<=api[-_ ]?key[=:]\s*)[A-Za-z0-9\-_.]+/gi,
   /bearer\s+[A-Za-z0-9\-_\.=]+/gi
 ];
@@ -23,7 +23,7 @@ function redactSecrets(text) {
   return out;
 }
 
-// Rate limiter (token bucket-ish per user)
+// ----- per-user rate limiter -----
 class RateLimiter {
   constructor(maxPerMinute = 6) {
     this.max = maxPerMinute;
@@ -40,7 +40,7 @@ class RateLimiter {
   }
 }
 
-// Simple rolling memory per channel with char budget
+// ----- channel-scoped rolling memory -----
 class ChannelMemory {
   constructor(charBudget = 4000) {
     this.charBudget = charBudget;
@@ -50,7 +50,7 @@ class ChannelMemory {
     const clean = redactSecrets(content);
     const arr = this.store.get(channelId) || [];
     arr.push({ role, content: clean });
-    // Trim to budget (approx by characters)
+    // trim to budget
     let total = arr.reduce((n, m) => n + (m.content?.length || 0), 0);
     while (total > this.charBudget && arr.length > 1) {
       arr.shift();
@@ -63,6 +63,14 @@ class ChannelMemory {
   }
 }
 
+// ----- Discord message safety helpers -----
+const MAX_DISCORD_CHARS = 1900; // keep < 2000 to be safe with formatting
+function toDiscordSafe(text) {
+  if (!text) return ' ';
+  if (text.length <= MAX_DISCORD_CHARS) return text;
+  return text.slice(0, MAX_DISCORD_CHARS - 10) + ' […]';
+}
+
 export function createNigiBot(config) {
   const {
     openaiApiKey,
@@ -73,6 +81,10 @@ export function createNigiBot(config) {
     puppeteerTimeoutMs = 10_000
   } = config;
 
+  if (!openaiApiKey) {
+    log('warn', 'OPENAI_API_KEY missing—/ask will return an error message.');
+  }
+
   const openai = new OpenAI({ apiKey: openaiApiKey });
   const memory = new ChannelMemory(memoryCharBudget);
   const limiter = new RateLimiter(rateLimitPerMin);
@@ -81,6 +93,9 @@ export function createNigiBot(config) {
   async function skillAsk(channelId, userId, userInput) {
     if (!limiter.allow(userId)) {
       return { response: "You're sending messages too fast. Please try again in a moment." };
+    }
+    if (!openaiApiKey) {
+      return { response: 'OpenAI key is not configured. Ask the admin to set OPENAI_API_KEY.' };
     }
 
     const history = memory.get(channelId);
@@ -101,7 +116,8 @@ export function createNigiBot(config) {
         temperature,
         messages
       });
-      const text = (resp.choices?.[0]?.message?.content || 'Sorry, I got no response.').trim();
+      const raw = (resp.choices?.[0]?.message?.content || 'Sorry, I got no response.').trim();
+      const text = toDiscordSafe(raw);
       memory.push(channelId, 'user', userInput);
       memory.push(channelId, 'assistant', text);
       return { response: text };
@@ -123,20 +139,36 @@ export function createNigiBot(config) {
     let browser;
     try {
       browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--no-first-run',
+          '--no-zygote'
+        ]
       });
+
       const page = await browser.newPage();
       page.setDefaultNavigationTimeout(Number(puppeteerTimeoutMs) || 10000);
+
+      // small UA/viewport hint; keeps images smaller and more compatible
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
+      );
+      await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+
       await page.goto(url, { waitUntil: 'domcontentloaded' });
-      const buffer = await page.screenshot({ fullPage: true });
+      await page.waitForSelector('body', { timeout: 5000 });
+
+      // viewport-only + jpeg to avoid >8MB uploads
+      let buffer = await page.screenshot({ fullPage: false, type: 'jpeg', quality: 80 });
       await browser.close();
 
-      // Brief LLM summary of the URL (no PII, no secrets)
       const summaryPrompt = `Summarize this page in 3 bullets for a Discord audience. URL: ${url}`;
       const summary = await skillAsk(channelId, userId, summaryPrompt);
 
-      const filename = `shot-${crypto.randomUUID().slice(0,8)}.png`;
+      const filename = `shot-${crypto.randomUUID().slice(0, 8)}.jpg`;
       return {
         response: `Here’s the page and a quick summary:\n${summary.response}`,
         file: { attachment: buffer, name: filename }
