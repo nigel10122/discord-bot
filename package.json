@@ -15,7 +15,7 @@
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "nodemon": "^3.1.10",
-    "openai": "^4.53.1",
+    "openai": "^5.13.1",
     "puppeteer": "^23.4.1"
   }
 }
