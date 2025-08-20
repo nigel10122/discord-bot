@@ -5,6 +5,20 @@
 - **/shot** — Capture a webpage screenshot + 3‑bullet summary
 - **Keyword:** mention `nigibot ...` and it replies
 
+# NigiBot 🤖
+A Discord bot powered by OpenAI for chat and website screenshots.
+
+## Invite the Bot
+👉 [Click here to invite NigiBot to your server](https://discord.com/oauth2/authorize?client_id=1145135940969439325&permissions=34816&integration_type=0&scope=bot+applications.commands)
+
+## Usage
+After inviting the bot:
+- `/ask q:<your question>` → Get an AI-powered reply
+- `/shot url:<website>` → Capture a screenshot of any website
+- Type **nigibot** in chat → keyword response
+
+[Invite NigiBot](https://discord.com/oauth2/authorize?client_id=1145135940969439325&permissions=34816&integration_type=0&scope=bot+applications.commands)
+
 ## Why it’s different
 - **Privacy by design:** secret redaction + bounded memory per channel
 - **Ops‑ready:** healthcheck endpoint, rate limiting, Dockerfile, CI
