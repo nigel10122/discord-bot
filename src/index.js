@@ -14,7 +14,7 @@ const client = new Client({
 
 // ---------- Lightweight runtime stats ----------
 const bootTime = Date.now();
-let sessionCommands = 0;  // counts /ask, /shot, and keyword-triggered replies
+let sessionCommands = 0; // counts /ask, /shot, /stats and keyword replies
 
 // ---------- Healthcheck ----------
 const port = Number(process.env.PORT || 3000);
@@ -46,35 +46,44 @@ const slashDefs = [
     .setDescription('Screenshot a URL and get a quick summary')
     .addStringOption(opt => opt.setName('url').setDescription('https://...').setRequired(true)),
 
-  // NEW: /stats
   new SlashCommandBuilder()
     .setName('stats')
-    .setDescription('Show bot usage stats (servers, uptime, session commands)')
+    .setDescription('Show bot usage stats (servers, uptime, session commands) v1.0.1') // bump text to force refresh
 ].map(cmd => cmd.toJSON());
 
-// ---------- Register commands (guild fast; global if no GUILD_ID) ----------
+// ---------- Register commands: GLOBAL + DEV GUILD + OPTIONAL EXTRA GUILDS ----------
 async function registerCommands() {
-  if (!process.env.DISCORD_CLIENT_ID) {
+  const appId = process.env.DISCORD_CLIENT_ID;
+  if (!appId) {
     console.warn('DISCORD_CLIENT_ID missing; skipping slash registration');
     return;
   }
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
   try {
+    // 1) GLOBAL commands for EVERY server (first-time global can take ~1h)
+    await rest.put(Routes.applicationCommands(appId), { body: slashDefs });
+    console.log('🌍 Registered GLOBAL slash commands');
+
+    // 2) DEV guild (instant)
     if (process.env.DISCORD_GUILD_ID) {
       await rest.put(
-        Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID),
+        Routes.applicationGuildCommands(appId, process.env.DISCORD_GUILD_ID),
         { body: slashDefs }
       );
-      console.log('✅ Registered GUILD slash commands');
-    } else {
-      await rest.put(
-        Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
-        { body: slashDefs }
-      );
-      console.log('✅ Registered GLOBAL slash commands (may take ~1h)');
+      console.log(`⚡ Registered DEV GUILD commands for ${process.env.DISCORD_GUILD_ID}`);
+    }
+
+    // 3) Additional guilds (instant), comma-separated IDs
+    if (process.env.ADDITIONAL_GUILD_IDS) {
+      const extra = process.env.ADDITIONAL_GUILD_IDS.split(',').map(s => s.trim()).filter(Boolean);
+      for (const gid of extra) {
+        await rest.put(Routes.applicationGuildCommands(appId, gid), { body: slashDefs });
+        console.log(`⚡ Registered EXTRA GUILD commands for ${gid}`);
+      }
     }
   } catch (e) {
-    console.error('⚠️ Slash registration failed:', e);
+    console.error('⚠️ Slash registration failed:', e?.message || e);
   }
 }
 
@@ -111,6 +120,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.commandName === 'stats') {
+      sessionCommands++;
       const uptimeSec = Math.floor((Date.now() - bootTime) / 1000);
       const guilds = client.guilds.cache.size;
       await interaction.reply(
